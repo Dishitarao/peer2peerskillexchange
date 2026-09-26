@@ -70,25 +70,35 @@ const SessionCard = ({
     ? session.learnerConfirmedCompletion
     : session.mentorConfirmedCompletion;
 
-  // ── Time-gate helper ─────────────────────────────────────────────────────
-  // Mirrors the backend logic: combine sessionDate (midnight UTC) with the
-  // HH:MM startTime string to build the exact start timestamp, then compare
-  // against the current local clock.
-  const sessionHasStarted = (() => {
-    if (!session.sessionDate || !session.startTime) return false;
-    const [h, m] = session.startTime.split(':').map(Number);
-    const start = new Date(session.sessionDate);
-    start.setUTCHours(h, m, 0, 0);
-    return Date.now() >= start.getTime();
+  // ── End-time gate helper ──────────────────────────────────────────────────
+  // Confirmation is allowed only AFTER the session's scheduled END time.
+  //
+  // WHY new Date(y, m, d, h, min) instead of setUTCHours:
+  //   sessionDate arrives from MongoDB as midnight UTC (e.g. "2026-09-26T00:00:00.000Z").
+  //   endTime is a plain "HH:MM" string representing LOCAL wall-clock time.
+  //
+  //   setUTCHours(17, 45) creates 17:45 UTC — displayed in IST (+5:30) as
+  //   23:15 / "10:15 PM", which caused the reported bug.
+  //
+  //   new Date(y, m, d, 17, 45) creates 17:45 in the browser's LOCAL timezone,
+  //   matching the time the user actually intended.
+  const sessionHasEnded = (() => {
+    if (!session.sessionDate || !session.endTime) return false;
+    const [h, m] = session.endTime.split(':').map(Number);
+    const base = new Date(session.sessionDate);        // midnight UTC
+    // Use local date components so the resulting Date is in local time:
+    const sessionEnd = new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, m, 0, 0);
+    return Date.now() >= sessionEnd.getTime();
   })();
 
-  // Human-readable scheduled start for the tooltip / helper text
-  const sessionStartDisplay = (() => {
-    if (!session.sessionDate || !session.startTime) return '';
-    const [h, m] = session.startTime.split(':').map(Number);
-    const d = new Date(session.sessionDate);
-    d.setUTCHours(h, m, 0, 0);
-    return d.toLocaleString(undefined, {
+  // Human-readable session END time for the "Confirmation available from" notice.
+  // Built the same way so it displays the correct local time.
+  const sessionEndDisplay = (() => {
+    if (!session.sessionDate || !session.endTime) return '';
+    const [h, m] = session.endTime.split(':').map(Number);
+    const base = new Date(session.sessionDate);
+    const sessionEnd = new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, m, 0, 0);
+    return sessionEnd.toLocaleString(undefined, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -186,24 +196,24 @@ const SessionCard = ({
       {session.status === 'ACCEPTED' && (
         <div
           style={{
-            border: `1px solid ${sessionHasStarted ? 'var(--border-color)' : 'var(--accent-amber)'}`,
+            border: `1px solid ${sessionHasEnded ? 'var(--border-color)' : 'var(--accent-amber)'}`,
             borderRadius: 'var(--radius-md)',
             padding: '0.85rem',
-            backgroundColor: sessionHasStarted ? 'var(--bg-primary)' : 'var(--accent-amber-light, #fffbeb)'
+            backgroundColor: sessionHasEnded ? 'var(--bg-primary)' : 'var(--accent-amber-light, #fffbeb)'
           }}
         >
-          {/* Pre-start notice */}
-          {!sessionHasStarted && (
+          {/* Pre-end notice: session has not ended yet */}
+          {!sessionHasEnded && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.6rem', fontSize: '0.85rem', color: 'var(--accent-amber)', fontWeight: 700 }}>
               <Hourglass size={15} />
-              Session has not started yet. Confirmation available from {sessionStartDisplay}.
+              Session has not ended yet. Confirmation available from {sessionEndDisplay}.
             </div>
           )}
 
-          {/* Post-start notice (before anyone confirms) */}
-          {sessionHasStarted && !session.mentorConfirmedCompletion && !session.learnerConfirmedCompletion && (
+          {/* Post-end notice (before anyone confirms) */}
+          {sessionHasEnded && !session.mentorConfirmedCompletion && !session.learnerConfirmedCompletion && (
             <div style={{ marginBottom: '0.6rem', fontSize: '0.825rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-              Session has started — you can now confirm that it was conducted.
+              Session has ended — you can now confirm that it was conducted.
             </div>
           )}
 
@@ -236,9 +246,9 @@ const SessionCard = ({
           </div>
 
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            {sessionHasStarted
+            {sessionHasEnded
               ? '* Both mentor and learner must confirm that the session was conducted for completion and credit exchange.'
-              : `* Confirmation will be available from ${sessionStartDisplay}.`}
+              : `* Confirmation will be available from ${sessionEndDisplay}.`}
           </div>
         </div>
       )}
@@ -291,12 +301,12 @@ const SessionCard = ({
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            disabled={currentUserConfirmed || !sessionHasStarted || isProcessing}
+            disabled={currentUserConfirmed || !sessionHasEnded || isProcessing}
             onClick={handleConfirm}
             style={{ marginLeft: 'auto' }}
             title={
-              !sessionHasStarted
-                ? `Available from ${sessionStartDisplay}`
+              !sessionHasEnded
+                ? `Available from ${sessionEndDisplay}`
                 : currentUserConfirmed
                 ? 'You have already confirmed this session'
                 : 'Confirm that this session was conducted'
@@ -305,8 +315,8 @@ const SessionCard = ({
             <UserCheck size={15} />
             {currentUserConfirmed
               ? 'Awaiting Peer Confirmation'
-              : !sessionHasStarted
-              ? 'Session Not Started Yet'
+              : !sessionHasEnded
+              ? 'Session Not Ended Yet'
               : 'Confirm Session Conducted'}
           </button>
         )}

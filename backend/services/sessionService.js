@@ -378,22 +378,32 @@ class SessionService {
       };
     }
 
-    // ── START-TIME GATE ──────────────────────────────────────────────────────
-    // Build a precise UTC timestamp from sessionDate (stored as midnight UTC)
-    // combined with the HH:MM startTime string.
-    const [startHour, startMin] = session.startTime.split(':').map(Number);
-    const sessionStart = new Date(session.sessionDate);
-    sessionStart.setUTCHours(startHour, startMin, 0, 0);
+    // ── END-TIME GATE ─────────────────────────────────────────────────────────
+    // Participants may only confirm AFTER the scheduled session has ended.
+    //
+    // WHY local Date constructor (not setUTCHours):
+    //   sessionDate is stored as midnight UTC ("2026-09-29T00:00:00.000Z").
+    //   startTime/endTime are plain HH:MM strings representing LOCAL wall-clock
+    //   time (e.g. "17:45" means 5:45 PM in the user's timezone).
+    //
+    //   setUTCHours(17, 45) would create 17:45 UTC — which in IST (+5:30) is
+    //   displayed as 23:15 / 11:15 PM, producing the wrong "10:15 PM" bug.
+    //
+    //   new Date(y, m, d, 17, 45) creates 17:45 in the SERVER's local timezone,
+    //   which matches the wall-clock time the user intended.
+    const d = new Date(session.sessionDate);
+    const [endHour, endMin] = session.endTime.split(':').map(Number);
+    const sessionEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), endHour, endMin, 0, 0);
 
     const now = new Date();
-    if (now < sessionStart) {
+    if (now < sessionEnd) {
       throw new AppError(
-        'Session completion cannot be confirmed before the scheduled start time. ' +
-          `This session is scheduled to start at ${session.startTime} on ${new Date(session.sessionDate).toDateString()}.`,
+        'Session completion can only be confirmed after the scheduled session end time. ' +
+          `This session is scheduled to end at ${session.endTime} on ${d.toDateString()}.`,
         400
       );
     }
-    // ────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Set participant's confirmation flag
     if (isMentor) {
