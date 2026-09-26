@@ -5,7 +5,7 @@ import { selectAuth } from '../redux/slices/authSlice';
 import { fetchWallet, selectWallet } from '../redux/slices/walletSlice';
 import { fetchUpcomingSessions, fetchIncomingRequests, fetchOutgoingRequests, selectSessions } from '../redux/slices/sessionSlice';
 import { fetchMySkills, selectSkills } from '../redux/slices/skillSlice';
-import { fetchNotifications, selectNotifications } from '../redux/slices/notificationSlice';
+
 import { sessionAPI } from '../services';
 import SessionCard from '../components/sessions/SessionCard';
 import SessionActionModal from '../components/sessions/SessionActionModal';
@@ -18,7 +18,6 @@ import {
   BookOpen,
   PlusCircle,
   Search,
-  Bell,
   CheckCircle,
   AlertCircle,
   ArrowRight,
@@ -34,7 +33,6 @@ const DashboardPage = () => {
   const { wallet } = useSelector(selectWallet);
   const { upcomingSessions, incomingRequests, outgoingRequests } = useSelector(selectSessions);
   const { mySkills } = useSelector(selectSkills);
-  const { notifications } = useSelector(selectNotifications);
 
   // Modals state
   const [actionModal, setActionModal] = useState({ isOpen: false, session: null, type: '' });
@@ -48,7 +46,6 @@ const DashboardPage = () => {
     dispatch(fetchIncomingRequests());
     dispatch(fetchOutgoingRequests());
     dispatch(fetchMySkills());
-    dispatch(fetchNotifications({ limit: 5 }));
   };
 
   useEffect(() => {
@@ -350,43 +347,6 @@ const DashboardPage = () => {
             )}
           </div>
 
-          {/* Recent Notifications Widget */}
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Bell size={18} color="var(--accent-amber)" /> Recent Alerts
-              </h3>
-              <Link to="/notifications" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                All Alerts
-              </Link>
-            </div>
-
-            {notifications && notifications.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {notifications.slice(0, 3).map((notif) => (
-                  <div
-                    key={notif._id}
-                    style={{
-                      fontSize: '0.85rem',
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      backgroundColor: notif.isRead ? 'transparent' : 'var(--primary-light)',
-                      borderLeft: notif.isRead ? 'none' : '3px solid var(--primary)'
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{notif.title}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {notif.message}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem 0' }}>
-                No new notifications.
-              </div>
-            )}
-          </div>
         </div>
       </div>
 

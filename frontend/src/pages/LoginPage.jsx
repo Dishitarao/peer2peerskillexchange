@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser, clearError, selectAuth } from '../redux/slices/authSlice';
-import { LogIn, AlertCircle, Sparkles, KeyRound } from 'lucide-react';
+import { LogIn, AlertCircle } from 'lucide-react';
 
 const LoginPage = () => {
   const dispatch = useDispatch();
@@ -28,11 +28,6 @@ const LoginPage = () => {
     dispatch(loginUser({ email, password }));
   };
 
-  const handleQuickLogin = (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    dispatch(loginUser({ email: demoEmail, password: demoPassword }));
-  };
 
   return (
     <div style={{ maxWidth: 460, margin: '2rem auto' }}>
@@ -97,50 +92,6 @@ const LoginPage = () => {
           </button>
         </form>
 
-        {/* Demo Accounts Quick Login Selector */}
-        <div
-          style={{
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid var(--border-color)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>
-            <Sparkles size={14} color="var(--primary)" /> One-Click Demo Accounts
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleQuickLogin('swapna@example.com', 'Password123!')}
-            >
-              Swapna (React Tutor)
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleQuickLogin('rahul@example.com', 'Password123!')}
-            >
-              Rahul (Python Tutor)
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleQuickLogin('dishita@example.com', 'Password123!')}
-            >
-              Dishita (UI/UX Tutor)
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}
-              onClick={() => handleQuickLogin('admin@skillsync.p2p', 'AdminPassword123!')}
-            >
-              Admin Account
-            </button>
-          </div>
-        </div>
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
           Don't have an account yet?{' '}
