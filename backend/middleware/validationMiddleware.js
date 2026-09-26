@@ -142,7 +142,7 @@ const sessionRequestSchema = Joi.object({
   startTime: Joi.string().regex(/^([01]\d|2[0-3]):?([0-5]\d)$/).required().messages({
     'string.pattern.base': 'Start time must be formatted as HH:mm (e.g., 14:00)'
   }),
-  durationMinutes: Joi.number().min(15).max(240).default(60),
+  durationMinutes: Joi.number().min(2).max(240).default(60),
   notes: Joi.string().allow('').max(1000).optional()
 });
 

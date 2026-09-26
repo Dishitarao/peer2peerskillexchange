@@ -32,7 +32,7 @@ const sessionSchema = new mongoose.Schema(
     durationMinutes: {
       type: Number,
       default: 60,
-      min: 15,
+      min: 2,
       max: 240
     },
     creditsExchanged: {

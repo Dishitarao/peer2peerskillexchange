@@ -134,6 +134,8 @@ const SessionRequestModal = ({ isOpen, onClose, skill, onSubmit, userBalance = 0
                   onChange={(e) => setDurationMinutes(e.target.value)}
                   className="form-select"
                 >
+                  <option value={2}>2 Minutes (Test)</option>
+                  <option value={5}>5 Minutes (Test)</option>
                   <option value={30}>30 Minutes</option>
                   <option value={45}>45 Minutes</option>
                   <option value={60}>60 Minutes (1 hour)</option>
