@@ -70,6 +70,34 @@ const SessionCard = ({
     ? session.learnerConfirmedCompletion
     : session.mentorConfirmedCompletion;
 
+  // ── Time-gate helper ─────────────────────────────────────────────────────
+  // Mirrors the backend logic: combine sessionDate (midnight UTC) with the
+  // HH:MM startTime string to build the exact start timestamp, then compare
+  // against the current local clock.
+  const sessionHasStarted = (() => {
+    if (!session.sessionDate || !session.startTime) return false;
+    const [h, m] = session.startTime.split(':').map(Number);
+    const start = new Date(session.sessionDate);
+    start.setUTCHours(h, m, 0, 0);
+    return Date.now() >= start.getTime();
+  })();
+
+  // Human-readable scheduled start for the tooltip / helper text
+  const sessionStartDisplay = (() => {
+    if (!session.sessionDate || !session.startTime) return '';
+    const [h, m] = session.startTime.split(':').map(Number);
+    const d = new Date(session.sessionDate);
+    d.setUTCHours(h, m, 0, 0);
+    return d.toLocaleString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  })();
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Top Header: Skill & Status */}
@@ -154,16 +182,31 @@ const SessionCard = ({
         </div>
       )}
 
-      {/* DUAL CONFIRMATION STATUS (for Accepted / In-progress sessions) */}
+      {/* DUAL CONFIRMATION STATUS (for Accepted sessions) */}
       {session.status === 'ACCEPTED' && (
         <div
           style={{
-            border: '1px solid var(--border-color)',
+            border: `1px solid ${sessionHasStarted ? 'var(--border-color)' : 'var(--accent-amber)'}`,
             borderRadius: 'var(--radius-md)',
             padding: '0.85rem',
-            backgroundColor: 'var(--bg-primary)'
+            backgroundColor: sessionHasStarted ? 'var(--bg-primary)' : 'var(--accent-amber-light, #fffbeb)'
           }}
         >
+          {/* Pre-start notice */}
+          {!sessionHasStarted && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.6rem', fontSize: '0.85rem', color: 'var(--accent-amber)', fontWeight: 700 }}>
+              <Hourglass size={15} />
+              Session has not started yet. Confirmation available from {sessionStartDisplay}.
+            </div>
+          )}
+
+          {/* Post-start notice (before anyone confirms) */}
+          {sessionHasStarted && !session.mentorConfirmedCompletion && !session.learnerConfirmedCompletion && (
+            <div style={{ marginBottom: '0.6rem', fontSize: '0.825rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+              Session has started — you can now confirm that it was conducted.
+            </div>
+          )}
+
           <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
             Session Completion Workflow (Dual Confirmation):
           </div>
@@ -176,7 +219,7 @@ const SessionCard = ({
               )}
               <span>
                 <strong>Mentor Confirmation:</strong>{' '}
-                {session.mentorConfirmedCompletion ? 'Confirmed' : 'Pending'}
+                {session.mentorConfirmedCompletion ? 'Confirmed ✓' : 'Pending'}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -187,13 +230,15 @@ const SessionCard = ({
               )}
               <span>
                 <strong>Learner Confirmation:</strong>{' '}
-                {session.learnerConfirmedCompletion ? 'Confirmed' : 'Pending'}
+                {session.learnerConfirmedCompletion ? 'Confirmed ✓' : 'Pending'}
               </span>
             </div>
           </div>
 
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            * Both mentor and learner must confirm that the offline session was conducted for completion and credit exchange.
+            {sessionHasStarted
+              ? '* Both mentor and learner must confirm that the session was conducted for completion and credit exchange.'
+              : `* Confirmation will be available from ${sessionStartDisplay}.`}
           </div>
         </div>
       )}
@@ -246,13 +291,22 @@ const SessionCard = ({
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            disabled={currentUserConfirmed || isProcessing}
+            disabled={currentUserConfirmed || !sessionHasStarted || isProcessing}
             onClick={handleConfirm}
             style={{ marginLeft: 'auto' }}
+            title={
+              !sessionHasStarted
+                ? `Available from ${sessionStartDisplay}`
+                : currentUserConfirmed
+                ? 'You have already confirmed this session'
+                : 'Confirm that this session was conducted'
+            }
           >
             <UserCheck size={15} />
             {currentUserConfirmed
               ? 'Awaiting Peer Confirmation'
+              : !sessionHasStarted
+              ? 'Session Not Started Yet'
               : 'Confirm Session Conducted'}
           </button>
         )}

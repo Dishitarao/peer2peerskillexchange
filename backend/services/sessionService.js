@@ -373,10 +373,27 @@ class SessionService {
     if (session.status === 'COMPLETED' && session.creditsTransferred) {
       return {
         session,
-        message: 'This session is already marked as completed and credits have been exchanged.',
+        message: 'This session has already been completed and credits have been exchanged.',
         isFullyCompleted: true
       };
     }
+
+    // ── START-TIME GATE ──────────────────────────────────────────────────────
+    // Build a precise UTC timestamp from sessionDate (stored as midnight UTC)
+    // combined with the HH:MM startTime string.
+    const [startHour, startMin] = session.startTime.split(':').map(Number);
+    const sessionStart = new Date(session.sessionDate);
+    sessionStart.setUTCHours(startHour, startMin, 0, 0);
+
+    const now = new Date();
+    if (now < sessionStart) {
+      throw new AppError(
+        'Session completion cannot be confirmed before the scheduled start time. ' +
+          `This session is scheduled to start at ${session.startTime} on ${new Date(session.sessionDate).toDateString()}.`,
+        400
+      );
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     // Set participant's confirmation flag
     if (isMentor) {
